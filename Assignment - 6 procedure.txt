@@ -1,0 +1,199 @@
+Assignment - 6
+
+1. Create a procedure which accepts input parameter and inserts the 
+data in the customer table.
+
+query :
+
+create procedure Insertingvalue 
+@cname varchar(20),@ag int,@caddress varchar(30)
+as
+insert into customers_5 values(@cname,@ag,@caddress)
+
+
+exec Insertingvalue 'divya',24,'Coimbatore'
+
+
+2.  Create a procedure for orders table , which displays all the purchase 
+made between  1-12-2005  and 2-12-2007 
+(Accept date as parameter_) 
+
+query:
+
+create procedure getorders( @startdate date ,@enddate date)
+as
+select * from orders_5 where orderdate  between  @startdate and @enddate
+
+exec getorders '2005-12-01', '2007-12-02'
+
+
+3. create a procedure which reads custid as parameter  
+and return qty and produtid as output parameter
+
+query :
+
+create procedure getproducts_5 (@cid int)
+as
+select quantity,orderid from orders_5 where custid=@cid
+
+
+exec  getproducts_5 3
+
+4. Write a batch that will check for the existence of the productname 
+“books” if it exists, display the total stock of the book else print  
+“productname books not found”.
+
+query :
+create procedure getstock (@total int output)
+as
+select @total=sum(quantity) from orders_5 where productname='Camera'
+
+if @total is not null
+ print 'Total stock of books : '+ cast(@total as varchar(10))
+ else
+ print 'productname books not found'
+
+ declare @res int
+ exec getstock @total = @res output
+ print 'Total : '+ cast(@res as varchar(10))
+
+
+5.insert  data to customer table via return value of sp_getdata() 
+procedure 
+
+query:
+
+create procedure getdata_5(
+    @cname varchar(50),
+    @age int,
+    @caddress varchar(50))
+as
+insert into customers_5 values (@cname, @age, @caddress)
+return scope_identity()
+
+declare @res int
+exec @res = getdata_5 'pragya', 22, 'Andhra'
+print 'Cust_Id: ' + cast(@res as varchar(10))
+
+select * from customers_5
+
+6. Create a procedure to display all customer details where rownumber 
+between 2 to 5 (accept row number as a parameter)
+
+
+query :
+
+create procedure getdetail(@startrow_no int, @endrow_no int)
+as
+with displaydata as (
+ select id,Custname,Age,Caddress,row_number() over (order by Id) as num
+    from customers_5)
+    select Id, custname, age, caddress
+    from displaydata
+    where num between @startrow_no and @endrow_no
+
+exec getdetail 2,5
+
+
+7.Create a stored procedure to insert a new employee 
+Create a table Employees and write a stored procedure: 
+• Procedure name: spAddEmployee 
+• Inputs: Name, Department, Salary 
+• Insert the record into Employees table. 
+• Return newly generated CustomerID using SCOPE_IDENTITY(). 
+
+
+create procedure spAddEmployee (@name varchar(50),@dept varchar(50), @salry int)
+as
+insert into  employees_table values(@name,@dept,@salry)
+return scope_identity()
+
+query:
+
+select * from employees_table
+
+declare @res int
+exec @res = spAddEmployee 'Pragya', 'HR', 5000
+print 'Newly added id : '+cast(@res as varchar(30))
+
+8.Create a stored procedure with default parameter 
+Create spGetProductsByCategory 
+• Parameter: CategoryName (default should be ‘Electronics’) 
+• Return all products of that category. 
+• Create Procedure WITH ENCRYPTION
+
+query:
+
+create procedure spGetProductsByCategory(@category varchar(30) ='Laptop')
+with encryption as
+select * from orders_5 where productname = @category
+
+exec spGetProductsByCategory
+
+9. Stored procedure using TRY…CATCH 
+Create spSafeOrderInsert 
+• Insert a new order 
+• If any error occurs, insert error details into an ErrorLog table 
+
+query :
+
+create procedure spSafeOrderInsert
+    @CustomerID int,
+    @ProductID int,
+    @Quantity int
+as
+
+    begin try
+       
+        insert into orders_8 values (@CustomerID, @ProductID, @Quantity, getdate());
+
+        print 'Order inserted successfully';
+    end try
+    begin catch
+      
+        insert into ErrorLog (ErrorMessage, ErrorSeverity, ErrorState, ErrorDate)
+        values (error_message(), error_severity(), error_state(), getdate());
+
+        print 'Error occurred while inserting order. Please check ErrorLog table.';
+        print error_message();
+        print error_line();
+        print error_number();
+        print error_severity();
+        print error_procedure();
+    end catch
+    
+exec spSafeOrderInsert @CustomerID = 1, @ProductID = 101, @Quantity = 5;
+exec spSafeOrderInsert @CustomerID = 2, @ProductID = 9999, @Quantity = 3;
+select * from ErrorLog
+select * from orders_8
+
+
+10.Stored procedure with multiple operations 
+Create spUpdateSalary 
+• Inputs: EmpID, Percentage 
+• Increase employee salary by given percentage 
+• Return updated salary 
+
+query :
+
+
+create procedure spUpdateSalary
+    @EmpID int,
+    @Percentage decimal(5,2)
+as
+    declare @UpdatedSalary int;
+
+    update employees_table
+    set Salary = Salary + (Salary * @Percentage / 100)
+    where EmployeeID = @EmpID;
+
+    select @UpdatedSalary = Salary from employees_table
+    where EmployeeID = @EmpID;
+    return @UpdatedSalary
+
+ declare @res int
+ exec @res = spUpdateSalary @EmpID = 1, @Percentage = 10;
+ print 'Updated Salary: ' + cast(@res as varchar(20));
+
+select * from employees_table
+ 

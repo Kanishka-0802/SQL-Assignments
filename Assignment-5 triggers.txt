@@ -1,0 +1,204 @@
+----Triggers-------------
+
+--------Assignment-5-------------------
+
+1. Create a trigger for table customer, which does not allow 
+the user to delete the record who stays in Bangalore, 
+Chennai, delhi 
+
+--task1----
+select * from customers_1
+create table custs_1(custid int,custname varchar(20),caddress varchar(30))
+insert into custs_1 values
+(1, 'Ravi', 'Banglore'),
+(2, 'Priya ', 'Chennai'),
+(3, 'Anu', 'Delhi'),
+(4, 'Sneha', 'Hyderabad'),
+(5, 'Rahul', 'Mumbai'),
+(6, 'Meena', 'Pune'),
+(7, 'Arjun', 'Kolkata')
+
+create trigger tr1 on custs_1
+for delete
+as
+begin
+if exists(select * from deleted where caddress in ('Banglore', 'Chennai', 'Delhi'))
+begin
+print 'you cannot delete customers from banglore,chennai,delhi'
+rollback transaction
+end
+end
+
+drop trigger tr1
+
+delete from custs_1 where caddress ='Banglore'
+
+2. Create a triggers for orders which allows the user to insert 
+only books, cd, mobile  
+
+---------------task2-------------------------------------
+create table orders_2(order_id int,
+    customer_id int,
+    order_date date,
+    product_name varchar(20),
+    price int,
+    quantity int)
+    insert into orders_2 values
+ (1, 101, '2025-01-01', 'Books', 120, 2),
+(2, 102, '2025-02-15', 'CD', 300, 1),
+(3, 103, '2025-03-10', 'Mobile', 15000, 1)
+
+select * from orders_2
+
+create trigger tr2 on orders_2
+for insert
+as
+begin
+if exists(select * from inserted where product_name not in ('Books','CD','Mobile'))
+begin
+print 'You can only insert orders for Books, CD, or Mobile'
+rollback transaction
+end
+end
+
+insert into orders_2 values(4,104,'2023-11-23','Books',300,6)
+insert into orders_2 values(5,105,'2023-10-03','Bag',100,2)
+drop trigger tr2
+
+3. Create a trigger for customer table whenever an item is 
+delete from this table. The corresponding item should be 
+added in customerhistory table. 
+
+----------------task3---------------------------
+CREATE TABLE customerhistory
+(
+    custid INT,
+    custname VARCHAR(50),
+    caddress VARCHAR(100),
+    deleted_date DATETIME DEFAULT GETDATE()
+)
+select * from custs_1
+
+create trigger trg3 on custs_1
+for delete
+as
+begin
+insert into customerhistory (custid, custname, caddress, deleted_date)
+select custid,custname,caddress,getdate() from deleted
+end
+delete from custs_1 where custid = 4;
+select * from customerhistory
+
+
+4. Create update trigger for stock. Display old values and new 
+values 
+
+-------------------task4--------------------
+
+
+select * from Stock
+
+create table stock_1
+(
+    stockid int,
+    stockname varchar(30),
+    quantity int,
+    price int
+)
+insert into stock_1 values
+(1, 'laptop', 10, 50000),
+(2, 'mobile', 20, 15000),
+(3, 'tablet', 15, 25000),
+(4, 'headphones', 30, 2000),
+(5, 'printer', 8, 12000);
+
+
+create trigger trg2
+on stock_1
+for update
+as
+begin
+    print 'stock table updated. showing old and new values:';
+
+    select 'old values' as info,
+           s.stockid,
+           s.stockname,
+           s.quantity,
+           s.price
+    from deleted s;
+
+    select 'new values' as info,
+           s.stockid,
+           s.stockname,
+           s.quantity,
+           s.price
+    from inserted s;
+end
+
+update stock_1
+set quantity = 12, price = 52000
+where stockid = 1;
+
+5. Create Instead Of Insert Trigger for Joined View (the user 
+should able to insert record for 2 table using single insert 
+command) Use following table 
+ 
+create table a 
+( 
+custid int, 
+custname varchar(12) 
+) 
+create table b 
+( 
+custid int, 
+product varchar(12) 
+) 
+ 
+create view testview 
+as 
+select a.* , b.product from a inner join b on a.custid = 
+b.custid 
+ 
+select * from testview 
+------------------task 5-----------------
+create table a 
+( 
+    custid int primary key, 
+    custname varchar(12) 
+);
+
+create table b 
+( 
+    custid int, 
+    product varchar(12) 
+);
+create view test1
+as 
+select a.custid, a.custname, b.product 
+from a 
+inner join b on a.custid = b.custid;
+
+
+create trigger trg1
+on test1
+instead of insert
+as
+begin
+    
+    insert into a (custid, custname)
+    select i.custid, i.custname
+    from inserted i;
+
+    
+    insert into b (custid, product)
+    select i.custid, i.product
+    from inserted i;
+end;
+insert into test1 values (1, 'ravi', 'mobile');
+
+insert into test1 values (2, 'sita', 'books');
+
+select * from a;
+select * from b;
+
+select * from test1
